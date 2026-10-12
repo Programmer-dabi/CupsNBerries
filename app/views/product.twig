@@ -1,0 +1,248 @@
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1" name="viewport"/>
+    <title>Kapétolyo Coffee &amp; Bakehouse</title>
+    <link href="{{ base_url }}public/style/style.css" rel="stylesheet"/>
+  </head>
+  <body>
+    {% include '/components/header.twig' %}
+    {# <?php include('../components/header.php');?> #}
+    {% for prod in products %}
+      <section class="page-shell" id="product">
+        <a class="back-link" href="menu.php"> ← Back to menu </a>
+
+        <div class="detail-layout" style="margin-top: 25px">
+          <div class="gallery">
+
+            {# Product thumbnails #}
+            <div class="thumbs">
+              {% for image in prod.images %}
+                <button
+                  class="{{ image.image_order == 1 ? 'selected' : '' }}"
+                  type="button"
+                >
+                  <img
+                    src="/{{ image.image_path }}"
+                    alt="{{ prod.product_name }}"
+                  />
+                </button>
+                      
+              {% endfor %}
+            </div>
+
+            {# Main product image #}
+            <div class="main-photo">
+              {% for image in prod.images %}
+                {% if image.image_order == 1 %}
+                  <img
+                    src="/{{ image.image_path }}"
+                    alt="{{ prod.product_name }}"
+                  />
+                {% endif %}
+              {% endfor %}
+            </div>
+
+          </div>
+        </div>
+
+        <div class="detail-copy">
+          <span class="kicker"> {{ prod.category }} </span>
+          <h1>{{ prod.product_name }}</h1>
+          <!-- <div class="detail-rating">
+            <span> ★★★★★ </span>
+            <b> 4.9 </b>
+            <u> 128 reviews </u>
+          </div> -->
+          <p>
+            {{ prod.description }}
+          </p>
+          <strong class="detail-price"> ₱{{ prod.base_price }} </strong>
+          <span class="stock"> ● In stock · Ready in 10~15 min </span>
+          <div class="option-block">
+            
+            {# Size chooser #}
+            <h4>
+              Choose a size
+              <small>Required</small>
+            </h4>
+
+            <div class="option-block">
+              <h4>Size</h4>
+
+              <div class="option-grid">
+                {% for variant in prod.variants %}
+                  <label class="option">
+
+                    <input
+                      type="radio"
+                      name="size"
+                      value="{{ variant.id }}"
+                      {% if loop.first %}checked{% endif %}
+                      {% if variant.stock_quantity <= 0 %}disabled{% endif %}
+                      required
+                    />
+
+                    <b>{{ variant.size_oz }}</b>
+
+                    <small>
+                      ₱{{ variant.price|number_format(2) }}
+
+                      {% if variant.stock_quantity <= 0 %}
+                        - Out of stock
+                      {% endif %}
+                    </small>
+
+                  </label>
+                {% else %}
+                  <p>No sizes available for this product.</p>
+                {% endfor %}
+              </div>
+            </div>
+            {# end size chooser #}
+          {# my overlooked fix later #}
+          {% if prod.category == 'Coffee' %}
+            {# <h1>hi!!</h1> #}
+            <div class="option-block">            
+                  <h4>Milk preference</h4>
+
+                  <div class="option-grid">
+                    <label class="option">
+                      <input type="radio" name="milk" value="regular" checked />
+                      <b>Regular</b>
+                      <small>No additional cost</small>
+                    </label>
+
+                    <label class="option">
+                      <input type="radio" name="milk" value="oat" />
+                      <b>Oat</b>
+                      <small>+ ₱25</small>
+                    </label>
+
+                    <label class="option">
+                      <input type="radio" name="milk" value="soy" />
+                      <b>Soy</b>
+                      <small>+ ₱20</small>
+                    </label>
+                  </div>
+                </div>
+                
+                <div class="custom-row">
+                  <label>
+                    Sugar level
+                    <select>
+                      <option>100% - Regular</option>
+                      <option>75% - Less sweet</option>
+                      <option>50% - Half sweet</option>
+                      <option>0% - No sugar</option>
+                    </select>
+                  </label>
+            {% if prod.category == 'Iced-Coffee' %}
+                  <label>
+                    Ice level
+                    <select>
+                      <option>Regular ice</option>
+                      <option>Less ice</option>
+                      <option>No ice</option>
+                    </select>
+                  </label>
+            {% endif %}
+              
+                </div>
+
+            {% endif %}
+            {# end overlooked #}
+           
+            {# Custom add-ons #}
+            <div class="addons">
+              <h4>Add-ons</h4>
+
+              {% for addon in prod.addons %}
+                <label class="addon">
+
+                  <input
+                    type="checkbox"
+                    name="addons[]"
+                    value="{{ addon.id }}"
+                  />
+
+                  <span>
+                    <b>{{ addon.addon_name }}</b>
+                  </span>
+
+                  <strong>
+                    + ₱{{ addon.addon_price|number_format(2) }}
+                  </strong>
+
+                </label>
+              {% else %}
+                <p>No add-ons available for this product.</p>
+              {% endfor %}
+            </div>
+
+            <label class="notes">
+              Order notes
+              <textarea placeholder="Any special requests?"></textarea>
+            </label>
+            <div class="add-row">
+              <div class="quantity">
+                <button>−</button>
+                <b> 1 </b>
+                <button>+</button>
+              </div>
+              <a class="primary grow" href="cart.php"> Add to cart · ₱145 </a>
+
+              {# <button class="wish">♡</button> #}
+            </div>
+          </div>
+        </div>
+        <!-- <div class="reviews">
+        <div class="section-heading">
+          <div>
+            <span class="kicker"> WHAT PEOPLE SAY </span>
+            <h2>Customer reviews</h2>
+          </div>
+          <button class="outline">Write a review</button>
+        </div>
+        <div class="review-grid">
+          <div class="rating-summary">
+            <b> 4.9 </b>
+            <span> ★★★★★ </span>
+            <p>Based on 128 verified orders</p>
+          </div>
+          <article class="review">
+            <div>
+              <span class="avatar"> M </span>
+              <b> Mika R. </b>
+              <small> Verified purchase </small>
+            </div>
+            <span class="stars"> ★★★★★ </span>
+            <p>
+              My go-to order! Creamy without being too sweet, and the espresso
+              still comes through.
+            </p>
+            <time> 2 days ago </time>
+          </article>
+          <article class="review">
+            <div>
+              <span class="avatar"> P </span>
+              <b> Paolo D. </b>
+              <small> Verified purchase </small>
+            </div>
+            <span class="stars"> ★★★★★ </span>
+            <p>
+              Ordered it with oat milk and an extra shot. It was ready right on
+              time.
+            </p>
+            <time> 1 week ago </time>
+          </article>
+        </div>
+      </div> -->
+      </section>
+    {% endfor %}
+    {% include '/components/footer.twig' %}
+    <script type="module" src="{{base_url}}public/js/main.js"></script>
+    {# <script type="module" src="../js/main.js"></script> #}
+  </body>
+</html>

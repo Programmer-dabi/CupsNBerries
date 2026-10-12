@@ -1,0 +1,11 @@
+{
+  "name": "John Smith",
+  "age": 30,
+  "isEmployed": true,
+  "skills": ["Python", "JavaScript", "SQL"],
+  "address": {
+    "city": "New York",
+    "zipCode": "10001"
+  },
+  "spouse": null
+}

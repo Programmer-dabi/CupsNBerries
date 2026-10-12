@@ -1,0 +1,12 @@
+{
+    "require": {
+        "flightphp/core": "^3.19",
+        "vlucas/phpdotenv": "^5.7",
+        "twig/twig": "^3.30"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "app/"
+        }
+    }
+}

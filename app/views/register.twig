@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Cups &amp; Berry</title>
+    <link href="{{base_url}}public/style/style.css" rel="stylesheet"/>
+  </head>
+  <body>
+    {% include 'components/header.twig' %}
+    
+    <section class="login-page" id="login">
+
+      <div class="login-image">
+        <a class="logo logo-light" href="home.php">
+          <span class="logo-mark"> C&amp;B</span>
+          <span>
+            Cups &amp; Berry
+            <small> Cups &amp; Berry </small>
+          </span>
+        </a>
+        <div>
+          <span class="kicker"> WELCOME BACK </span>
+          <h1>
+            Your next great cup
+            <br />
+            is just a few clicks away.
+          </h1>
+          <p>
+            Order ahead, skip the wait, and make more time for the moments that
+            matter.
+          </p>
+        </div>
+        <small> © 2026 Cups &amp; Berry </small>
+      </div>
+      <form method='POST' action = '/addUser' class="login-card">
+        <a class="back-link" href="home.php"> ← Back to shop </a>
+        <div>
+          <span class="kicker"> CUSTOMER REGISTRATION </span>
+          <h1>Sign up</h1>
+          <p>
+            Already have an Account?
+            <a href='/login'> Login here </a>
+          </p>
+        </div>
+        <label>
+          Email address
+          <input placeholder="you@email.com" required="" type="email"  name = "email">
+        </label>
+          <label>
+          Name
+          <input placeholder="Enter your name" required="" type="text" name = "name">
+        </label>
+          <label>
+          Enter your phone number
+          <input placeholder="Phone Number" required="" type="number" name="phonenum">
+        </label>
+        <label>
+          Password
+          <input
+            placeholder="Enter your password"
+            required=""
+            type="password"
+            name="password"
+          >
+        </label>
+        <label>
+          Confirm Password
+          <input
+            placeholder="Confirm your password"
+            required=""
+            type="password"
+            name="confpassword"
+          />
+        </label>
+        <input type="submit" value="Sign up →" class="primary" style="text-align: center">
+      </form>
+    </section>
+    
+            {% include 'components/footer.twig' %}
+
+    <script type="module" src="{{base_url}}public/js/main.js"></script>
+  </body>
+</html>
