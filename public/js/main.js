@@ -179,6 +179,29 @@ document.addEventListener("DOMContentLoaded", () => {
   // initProductForm();
 
 
+  
+
+
+  //fetch api
+const currentPage = document.body.dataset.page;
+if(currentPage === "product"){
+  const product = document.getElementById('product').dataset.id;
+ async function getData(prodId) {
+    try {
+       const response = await fetch(`/products/${prodId}`);
+        const user = await response.json();
+        return user;
+    } catch (error) {
+      console.error('Failed: ' . error);
+    }
+  }
+
+
+  
+  
+// put it here gpbro
+
+
   // ===========================================================
   // add to Cart
   // ===========================================================
@@ -191,21 +214,12 @@ document.addEventListener("DOMContentLoaded", () => {
     function getButtonValue(){
       
       radiobuttons.forEach(element => {
-        console.log(element.value)
+        console.log('h' + element.value)
       });
 
     }
-  function getVariantData() {
-    const el = document.getElementById("variantData");
-    if (!el) return null;
-    try {
-      return JSON.parse(el.textContent);
-    } catch (err) {
-      console.error("Invalid variant JSON", err);
-      return null;
-    }
-  }
-  console.log(getVariantData())
     getButtonValue();
   }
+}
+ 
 });

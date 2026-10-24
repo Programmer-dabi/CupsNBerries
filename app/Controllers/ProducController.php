@@ -416,6 +416,47 @@ public function openProduct($id): void
         return;
     }
 }
+
+    public function passData($id)
+    {
+        header('Content-Type: application/json');
+
+
+        
+        try {
+        $productModel = new Product();
+
+        $products = $productModel->getProduct('id', $id);
+
+        // Check whether the product exists.
+        if (empty($products)) {
+            Flight::halt(404, 'Product not found.');
+            return;
+        }
+
+        // Get the single product from the array.
+        // $product = reset($products);
+        // echo '<pre>';
+        // var_dump($products);
+        // echo '</pre>';
+        // die();
+
+        echo json_encode([
+            'Products' => $products,
+            // 'name' => 'Spanish Latte'
+        ]);
+
+    } catch (InvalidArgumentException $error) {
+        Flight::halt(400, $error->getMessage());
+        return;
+
+    } catch (Throwable $error) {
+        error_log($error->__toString());
+
+        Flight::halt(500, $error->getMessage());
+        return;
+    }
+    }
 }
 
 ?>

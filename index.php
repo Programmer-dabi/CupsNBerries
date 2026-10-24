@@ -1,6 +1,4 @@
 <?php
-
-;
     ini_set('display_errors', '1');
     ini_set('display_startup_errors', '1');
     error_reporting(E_ALL);
@@ -39,6 +37,7 @@
     Flight::route('/addproduct', [new ProducController(), 'index']);
     Flight::route('POST /add', [new ProducController(), 'add']);
     Flight::route('GET /product/@id', [new ProducController(), 'openProduct']);
+    Flight::route('GET /products/@id', [new ProducController(), 'passdata']);
 
 
 

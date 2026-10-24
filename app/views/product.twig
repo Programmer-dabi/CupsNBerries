@@ -6,11 +6,11 @@
     <title>Kapétolyo Coffee &amp; Bakehouse</title>
     <link href="{{ base_url }}public/style/style.css" rel="stylesheet"/>
   </head>
-  <body>
+  <body data-page="product">
     {% include '/components/header.twig' %}
     {# <?php include('../components/header.php');?> #}
     {% for prod in products %}
-      <section class="page-shell" id="product">
+      <section class="page-shell" id="product" data-id="{{prod.id}}">
         <a class="back-link" href="/"> ← Back to menu </a>
 
         <div class="detail-layout" style="margin-top: 25px">
@@ -34,14 +34,10 @@
 
             {# Main product image #}
             <div class="main-photo">
-              {% for image in prod.images %}
-                {% if image.image_order == 1 %}
-                  <img
-                    src="/{{ image.image_path }}"
+              <img
+                    src="/{{ prod.images[0].image_path }}"
                     alt="{{ prod.product_name }}"
                   />
-                {% endif %}
-              {% endfor %}
             </div>
 
           </div>
@@ -84,6 +80,7 @@
                       {% if loop.first %}checked{% endif %}
                       {% if variant.stock_quantity <= 0 %}disabled{% endif %}
                       required
+                      data-price="{{variant.price}}"
                     />
 
                     <b>{{ variant.size_oz }}</b>
@@ -104,7 +101,7 @@
             </div>
             {# end size chooser #}
           {# my overlooked fix later #}
-          {% if prod.category == 'Coffee' %}
+          {% if prod.category == 'Coffee' or prod.category == 'Iced-Coffee' %}
             {# <h1>hi!!</h1> #}
             <div class="option-block">            
                   <h4>Milk preference</h4>
