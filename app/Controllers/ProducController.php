@@ -1,6 +1,7 @@
 <?php
 namespace App\Controllers;
 use App\Models\Product;
+use App\Models\Cart;
 use Flight;
 use InvalidArgumentException;
 use RuntimeException;
@@ -11,6 +12,8 @@ class ProducController{
   private array $variantCategories = [
         'Coffee',
         'Tea',
+        'Desserts',
+        'Pastries',
         'Desserts'
     ];
     public function index(){
@@ -402,7 +405,9 @@ public function openProduct($id): void
         // die();
 
         Flight::render('product.twig', [
-            'products' => $products
+            'products' => $products,
+            'milk_options' => Cart::milkOptions(),
+            'cart_count' => (new Cart())->getCount(),
         ]);
 
     } catch (InvalidArgumentException $error) {
@@ -456,6 +461,82 @@ public function openProduct($id): void
         Flight::halt(500, $error->getMessage());
         return;
     }
+    }
+
+    public function addToCart($id): void
+    {
+        $contentType = explode(';', $_SERVER['CONTENT_TYPE'] ?? '')[0];
+        if (strtolower(trim($contentType)) !== 'application/json') {
+            Flight::json(['success' => false, 'message' => 'Send an application/json request.'], 415);
+            return;
+        }
+
+        try {
+            $data = json_decode(Flight::request()->getBody(), false, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException $error) {
+            Flight::json(['success' => false, 'message' => 'Invalid JSON request body.'], 400);
+            return;
+        }
+
+        $productId = filter_var($id, FILTER_VALIDATE_INT);
+        if ($productId === false || $productId < 1) {
+            Flight::json(['success' => false, 'message' => 'Invalid product ID.'], 422);
+            return;
+        }
+
+        if (!$data instanceof \stdClass) {
+            Flight::json(['success' => false, 'message' => 'Expected a JSON object.'], 422);
+            return;
+        }
+
+        foreach (['variant_id', 'milk_preference', 'sugar_level', 'addon_ids'] as $field) {
+            if (!property_exists($data, $field)) {
+                Flight::json(['success' => false, 'message' => 'Missing field: ' . $field], 422);
+                return;
+            }
+        }
+
+        $quantity = property_exists($data, 'quantity') ? $data->quantity : 1;
+        if (
+            ($data->variant_id !== null && (!is_int($data->variant_id) || $data->variant_id < 1)) ||
+            !in_array($data->milk_preference, [null, 'regular', 'oat', 'soy'], true) ||
+            !in_array($data->sugar_level, [null, 100, 75, 50, 0], true) ||
+            !is_array($data->addon_ids) ||
+            !is_int($quantity) || $quantity < 1 || $quantity > 99
+        ) {
+            Flight::json(['success' => false, 'message' => 'Invalid product options.'], 422);
+            return;
+        }
+
+        foreach ($data->addon_ids as $addonId) {
+            if (!is_int($addonId) || $addonId < 1) {
+                Flight::json(['success' => false, 'message' => 'Add-on IDs must be positive integers.'], 422);
+                return;
+            }
+        }
+
+        try {
+            $cartModel = new Cart();
+            $key = $cartModel->addToCart(
+                $productId,
+                $data->variant_id,
+                $data->addon_ids,
+                $quantity,
+                $data->milk_preference,
+                $data->sugar_level
+            );
+            Flight::json([
+                'success' => true,
+                'message' => 'Product added to your cart.',
+                'cart_key' => $key,
+                'redirect_url' => '/cart',
+            ]);
+        } catch (InvalidArgumentException $error) {
+            Flight::json(['success' => false, 'message' => $error->getMessage()], 422);
+        } catch (Throwable $error) {
+            error_log('Cart save failed (' . get_class($error) . ', code ' . $error->getCode() . ').');
+            Flight::json(['success' => false, 'message' => 'Could not save your cart. Please try again.'], 500);
+        }
     }
 }
 

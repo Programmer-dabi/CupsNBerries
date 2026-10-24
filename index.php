@@ -21,6 +21,7 @@
     use App\Controllers\AuthenController;
     use App\Controllers\HomeController;
     use App\Controllers\ProducController;
+    use App\Controllers\CartController;
     use App\Middleware\AuthMiddleware;
 
     Flight::route('/login', [new AuthenController(),'login']);
@@ -38,6 +39,10 @@
     Flight::route('POST /add', [new ProducController(), 'add']);
     Flight::route('GET /product/@id', [new ProducController(), 'openProduct']);
     Flight::route('GET /products/@id', [new ProducController(), 'passdata']);
+    Flight::route('POST /addToCart/@id', [new ProducController(), 'addToCart']);
+    Flight::route('GET /cart', [new CartController(), 'index']);
+    Flight::route('POST /cart/@key/quantity', [new CartController(), 'updateQuantity']);
+    Flight::route('POST /cart/@key/remove', [new CartController(), 'remove']);
 
 
 
