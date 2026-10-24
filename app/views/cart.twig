@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Kapétolyo Coffee &amp; Bakehouse</title>
+    <link href="{{ base_url }}public/style/style.css" rel="stylesheet" />
+  </head>
+  <body>
+    {% include 'components/header.twig' %}
+    <section class="page-shell" id="cart">
+      <div class="page-title compact">
+        <span class="kicker"> YOUR ORDER </span>
+        <h1>Shopping cart</h1>
+        <p data-cart-summary-count>{{ cart_count }} {{ cart_count == 1 ? 'item' : 'items' }} waiting for you</p>
+        <p data-cart-update-status role="status" aria-live="polite"></p>
+        {% if cart_error %}
+        <p role="alert">{{ cart_error }}</p>
+        {% endif %}
+      </div>
+      <div class="cart-layout">
+        <div class="cart-list">
+          {% for key, item in items %}
+          <article class="cart-item" data-cart-item="{{ key }}">
+            {% if item.image_path %}
+            <img
+              alt="{{ item.product_name }}"
+              src="{{ base_url }}{{ item.image_path }}"
+            />
+            {% else %}
+            <span aria-hidden="true"></span>
+            {% endif %}
+            <div class="cart-item-info">
+              <span>{{ item.category }}</span>
+              <h3><a href="/product/{{ item.product_id }}">{{ item.product_name }}</a></h3>
+              <p>
+                {{ item.variant_label ?: 'Standard' }}
+                {% if item.milk_preference is not null %} · {{ item.milk_preference|capitalize }} milk{% endif %}
+                {% if item.sugar_level is not null %} · {{ item.sugar_level }}% sugar{% endif %}
+                {% for addon in item.addons %} · {{ addon.name }}{% endfor %}
+              </p>
+              <form action="/cart/{{ key }}/remove" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                <button type="submit">Remove</button>
+              </form>
+            </div>
+            <div class="cart-item-end">
+              <strong data-cart-line-total>₱{{ item.line_total|number_format(2) }}</strong>
+              <form class="quantity" action="/cart/{{ key }}/quantity" method="POST" data-cart-quantity-form>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+                <button type="submit" name="quantity" value="{{ item.quantity - 1 }}" data-quantity-step="-1" aria-label="Decrease quantity of {{ item.product_name }}" {% if item.quantity <= 1 %}disabled{% endif %}>−</button>
+                <b data-cart-quantity>{{ item.quantity }}</b>
+                <button type="submit" name="quantity" value="{{ item.quantity + 1 }}" data-quantity-step="1" aria-label="Increase quantity of {{ item.product_name }}" {% if item.quantity >= 99 %}disabled{% endif %}>+</button>
+              </form>
+            </div>
+          </article>
+          {% else %}
+          <p>Your cart is empty.</p>
+          {% endfor %}
+          <a class="back-link" href="/#menu"> ← Continue shopping </a>
+        </div>
+        <aside class="summary-card">
+          <h2>Order summary</h2>
+          <div>
+            <span> Subtotal </span>
+            <b data-cart-subtotal> ₱{{ subtotal|number_format(2) }} </b>
+          </div>
+          <div>
+            <span> Pickup fee </span>
+            <b class="green"> Free </b>
+          </div>
+          <hr />
+          <div class="total">
+            <span> Total </span>
+            <b data-cart-total> ₱{{ total|number_format(2) }} </b>
+          </div>
+          <small> Taxes are included in listed prices. </small>
+          <a
+            class="primary"
+            href="checkout.php"
+            style="display: block; text-align: center; margin-top: 15px">
+            Proceed to checkout →
+          </a>
+          <p class="safe-note">✓ Pay with cash at the counter</p>
+        </aside>
+      </div>
+    </section>
+    {% include 'components/footer.twig' %}
+    <script type="module" src="{{ base_url }}public/js/main.js"></script>
+  </body>
+</html>

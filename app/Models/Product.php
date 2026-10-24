@@ -181,7 +181,7 @@ class Product{
                 p.image_path,
                 p.image_order
             FROM product_images p
-            ORDER BY p.image_order DESC";
+            ORDER BY p.image_order ASC";
         $resultimage = $this->db->query($sqlImageTable);
         $rowImage = $resultimage->fetch_all(MYSQLI_ASSOC);
         $products = [];
