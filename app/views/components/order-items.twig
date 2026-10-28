@@ -1,0 +1,21 @@
+{% for item in items %}
+<div class="success-item">
+  <span>{{ item.quantity }}×</span>
+  {% if item.image_path %}
+  <img src="{{ base_url }}{{ item.image_path }}" alt="{{ item.product_name }}" />
+  {% else %}
+  <span aria-hidden="true"></span>
+  {% endif %}
+  <div>
+    <b>{{ item.product_name }}</b>
+    <small>
+      {{ item.variant_label ?: 'Standard' }}
+      {% if item.milk_preference is not null %} · {{ item.milk_preference|capitalize }} milk{% endif %}
+      {% if item.sugar_level is not null %} · {{ item.sugar_level }}% sugar{% endif %}
+      {% for addon in item.addons %} · {{ addon.name }} (+₱{{ addon.price|number_format(2) }}){% endfor %}
+    </small>
+    <small>₱{{ item.unit_price|number_format(2) }} each</small>
+  </div>
+  <strong>₱{{ item.line_total|number_format(2) }}</strong>
+</div>
+{% endfor %}

@@ -1,0 +1,3 @@
+{% if order.barangay and order.street and order.house_no %}
+<p><b>Delivery address:</b><br />{{ order.house_no }} {{ order.street }}, {{ order.barangay }}, {{ order.city }}</p>
+{% endif %}

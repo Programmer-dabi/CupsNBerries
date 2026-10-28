@@ -1,6 +1,7 @@
 <?php
 namespace App\Controllers;
 use App\Models\User;
+use App\Models\Cart;
 
     ini_set('display_errors', '1');
     ini_set('display_startup_errors', '1');
@@ -9,7 +10,8 @@ class AuthenController{
     public function login (){
 
     if(isset($_SESSION['user'])){
-        \Flight::render('home.twig');
+        \Flight::redirect('/');
+        return;
     }
        \Flight::render('login.twig', []);
     }
@@ -22,7 +24,7 @@ class AuthenController{
     public function logout (){
         session_unset(); 
         session_destroy();
-        \Flight::render('login.twig', []);
+        \Flight::redirect('/login');
     }
     public function addUser(){
         if(isset($_POST['email']) && isset($_POST['name']) && isset( $_POST['phonenum']) && isset($_POST['password']) && isset($_POST['confpassword'])){
@@ -59,19 +61,28 @@ class AuthenController{
     }
 
     public function Authent(){
-        if(isset($_POST['email']) && isset($_POST['password'])){
-            $user = new User();
-            foreach ($user -> getUsers() as $val) {
-                if($val['email'] === $_POST['email']){
-                    $_SESSION['user'] = $val['id'];
+        $email = $_POST['email'] ?? null;
+        $password = $_POST['password'] ?? null;
+        if (!is_string($email) || !is_string($password) || !filter_var(trim($email), FILTER_VALIDATE_EMAIL) || $password === '') {
+            \Flight::render('login.twig', ['err' => 'Enter a valid email address and password.']);
+            return;
+        }
 
-                    \Flight::render('home.twig');
-                }
+        try {
+            $user = (new User())->getByEmail(trim($email));
+            if ($user === null || !password_verify($password, $user['password'])) {
+                \Flight::render('login.twig', ['err' => 'Invalid email address or password.']);
+                return;
             }
-        }else{
-        \Flight::render('login.twig', [
-                
-            ]);
+
+            session_regenerate_id(true);
+            (new Cart())->mergeGuestCart((int) $user['id']);
+            $_SESSION['user'] = (int) $user['id'];
+            unset($_SESSION['cart_csrf']);
+            \Flight::redirect('/', 303);
+        } catch (\Throwable $error) {
+            error_log('Login failed (' . get_class($error) . ', code ' . $error->getCode() . ').');
+            \Flight::render('login.twig', ['err' => 'Could not sign in. Please try again.']);
         }
     }
 

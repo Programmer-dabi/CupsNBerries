@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Cups &amp; Berries</title>
+    <link href="{{ base_url }}public/style/style.css" rel="stylesheet" />
+  </head>
+  <body>
+    {% include 'components/header.twig' %}
+    <section class="success-page" id="success">
+      <div class="success-check">✓</div>
+      <span class="kicker"> ORDER RECEIVED </span>
+      <h1>We’ve got your order!</h1>
+      <p>
+        Thanks, {{ order.customer_name }}. Your order has been placed.
+      </p>
+      <div class="order-number">
+        <small> ORDER NUMBER </small>
+        <b>#{{ order.order_number }}</b>
+      </div>
+      <div class="success-card">
+        <div class="success-meta">
+          {% if order.pickup_time %}<div>
+            <small> PICKUP TIME </small>
+            <b>{{ order.pickup_time|date('M j, Y · g:i A', 'Asia/Manila') }}</b>
+          </div>{% endif %}
+          <div>
+            <small> PAYMENT </small>
+            <b>{{ order.payment_label }}</b>
+          </div>
+          <div>
+            <small> STATUS </small>
+            <span class="status {{ order.status|lower|replace({' ': '_'}) }}">{{ order.status }}</span>
+          </div>
+        </div>
+        <hr />
+        {% include 'components/order-items.twig' with {items: order.items} %}
+        {% include 'components/delivery-address.twig' %}
+        {% if order.notes %}
+        <p><b>Order notes:</b> {{ order.notes }}</p>
+        {% endif %}
+        <hr />
+        <div class="success-total">
+          <span> Total amount </span>
+          <b>₱{{ order.total|number_format(2) }}</b>
+        </div>
+      </div>
+      <div class="success-actions">
+        <a class="primary" href="/tracking/{{ order.id }}"> Track order </a>
+        <a class="outline" href="/"> Back to home </a>
+      </div>
+      <small class="confirmation-note">
+        Contact: {{ order.email }} · {{ order.phone_number }}
+      </small>
+    </section>
+    {% include 'components/footer.twig' %}
+    <script type="module" src="{{ base_url }}public/js/main.js"></script>
+  </body>
+</html>

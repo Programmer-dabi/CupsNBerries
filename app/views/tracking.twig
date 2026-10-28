@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Cups &amp; Berries</title>
+    <link href="{{ base_url }}public/style/style.css" rel="stylesheet" />
+  </head>
+  <body>
+    {% include 'components/header.twig' %}
+    <section class="page-shell" id="tracking" data-tracking-status-url="/tracking/{{ order.id }}/status">
+      <a class="back-link" href="/account#orders"> ← Back to my orders </a>
+      <div class="tracking-card">
+        <span class="kicker">ORDER #{{ order.order_number }}</span>
+        <h1 data-tracking-heading>{{ tracking_heading }}</h1>
+        <span class="status {{ status_class }}" data-tracking-status role="status" aria-live="polite">{{ status }}</span>
+        <p class="safe-note" data-tracking-update-note role="status" aria-live="polite"></p>
+        {% if order.pickup_time %}<p>
+          Pickup schedule:
+          <b>{{ order.pickup_time|date('M j, Y · g:i A', 'Asia/Manila') }}</b>
+        </p>{% endif %}
+        <div class="progress-list" data-tracking-progress aria-label="Order progress" {% if progress_step < 1 %}hidden{% endif %}>
+          {% for step in tracking_steps %}
+          <div class="progress {{ progress_step >= loop.index ? 'active' : '' }}" data-tracking-step="{{ loop.index }}" {% if progress_step == loop.index %}aria-current="step"{% endif %}>
+            <span data-tracking-marker>{{ progress_step >= loop.index ? '✓' : loop.index }}</span>
+            <div>
+              <b data-tracking-step-label>{{ step }}</b>
+              <small data-tracking-step-note {% if loop.index != progress_step and loop.index != progress_step + 1 %}hidden{% endif %}>{{ progress_step == loop.index ? 'Current status' : (progress_step + 1 == loop.index ? 'Up next' : '') }}</small>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% if order.pickup_time %}<div class="pickup-box">
+          ▣
+          <div>
+            <small> PICKUP LOCATION </small>
+            <b> Cups &amp; Berries Arellano Dagupan </b>
+          </div>
+        </div>{% endif %}
+        <h2>Order details</h2>
+        <p>
+          <b>{{ order.customer_name }}</b><br />
+          {{ order.email }} · {{ order.phone_number }}<br />
+          Placed {{ order.created_at|date('M j, Y · g:i A', false) }}<br />
+          Mode of payment: {{ order.payment_label }}
+        </p>
+        {% include 'components/order-items.twig' with {items: order.items} %}
+        {% include 'components/delivery-address.twig' %}
+        {% if order.notes %}
+        <p><b>Order notes:</b> {{ order.notes }}</p>
+        {% endif %}
+        <hr />
+        <div class="success-total">
+          <span>Subtotal</span>
+          <b>₱{{ order.subtotal|number_format(2) }}</b>
+        </div>
+        {% if order.pickup_time %}<p>Pickup fee: Free</p>{% endif %}
+        <div class="success-total">
+          <span>Total amount</span>
+          <b>₱{{ order.total|number_format(2) }}</b>
+        </div>
+      </div>
+    </section>
+    {% include 'components/footer.twig' %}
+    <script type="module" src="{{ base_url }}public/js/main.js"></script>
+  </body>
+</html>

@@ -7,11 +7,9 @@ use mysqli;
 class Product{
     private mysqli $db;
 
-        public function __construct()
+        public function __construct(?mysqli $db = null)
         {
-            $database = new Database();
-
-            $this->db = $database->getConnection();
+            $this->db = $db ?? (new Database())->getConnection();
         }
 
          // 1. Insert the main product.
@@ -151,6 +149,124 @@ class Product{
             throw $error;
         }
     }
+    public function saveForAdmin(?int $id, array $data, array $images, array $addons, array $variants): int
+    {
+        if ($id === null) {
+            return $this->createComplete($data, $images, $addons, $variants);
+        }
+        $this->db->begin_transaction();
+        try {
+            $stmt = $this->db->prepare('SELECT id FROM products WHERE id = ? FOR UPDATE');
+            $stmt->bind_param('i', $id);
+            $stmt->execute();
+            $exists = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+            if ($exists === null) {
+                throw new \InvalidArgumentException('Product not found.');
+            }
+            $stmt = $this->db->prepare('UPDATE products SET product_name = ?, category = ?, description = ?, base_price = ?, availability = ? WHERE id = ?');
+            $stmt->bind_param('sssdsi', $data['product_name'], $data['category'], $data['description'], $data['base_price'], $data['availability'], $id);
+            $stmt->execute();
+            $stmt->close();
+
+            foreach (['product_variants' => $variants, 'product_addons' => $addons] as $table => $rows) {
+                // Table names come only from the fixed map above.
+                $stmt = $this->db->prepare("SELECT id FROM $table WHERE product_id = ? FOR UPDATE");
+                $stmt->bind_param('i', $id);
+                $stmt->execute();
+                $remaining = array_fill_keys(array_column($stmt->get_result()->fetch_all(MYSQLI_ASSOC), 'id'), true);
+                $stmt->close();
+                $used = [];
+                foreach ($rows as $row) {
+                    $rowId = $row['id'] ?? 0;
+                    if ($rowId && (!isset($remaining[$rowId]) || isset($used[$rowId]))) {
+                        throw new \InvalidArgumentException('A selected variant or add-on does not belong to this product.');
+                    }
+                    if ($table === 'product_variants') {
+                        if ($rowId) {
+                            // Existing inventory changes only through the variant stock form.
+                            $stmt = $this->db->prepare('UPDATE product_variants SET size_oz = ?, price = ? WHERE id = ? AND product_id = ?');
+                            $stmt->bind_param('sdii', $row['size_oz'], $row['price'], $rowId, $id);
+                            $stmt->execute();
+                            $stmt->close();
+                        } else {
+                            $this->addVariant($id, $row['size_oz'], $row['price'], $row['stock']);
+                        }
+                    } elseif ($rowId) {
+                        $stmt = $this->db->prepare('UPDATE product_addons SET addon_name = ?, addon_price = ? WHERE id = ? AND product_id = ?');
+                        $stmt->bind_param('sdii', $row['name'], $row['price'], $rowId, $id);
+                        $stmt->execute();
+                        $stmt->close();
+                    } else {
+                        $this->addAddon($id, $row['name'], $row['price']);
+                    }
+                    if ($rowId) {
+                        $used[$rowId] = true;
+                    }
+                }
+                foreach (array_diff_key($remaining, $used) as $rowId => $_) {
+                    $stmt = $this->db->prepare("DELETE FROM $table WHERE id = ? AND product_id = ?");
+                    $stmt->bind_param('ii', $rowId, $id);
+                    $stmt->execute();
+                    $stmt->close();
+                }
+            }
+            foreach ($images as $image) {
+                $stmt = $this->db->prepare('DELETE FROM product_images WHERE product_id = ? AND image_order = ?');
+                $stmt->bind_param('ii', $id, $image['order']);
+                $stmt->execute();
+                $stmt->close();
+                $this->addImage($id, $image['path'], $image['order']);
+            }
+            $this->db->commit();
+            return $id;
+        } catch (\Throwable $error) {
+            $this->db->rollback();
+            throw $error;
+        }
+    }
+
+    public function setVariantStock(int $productId, int $variantId, int $quantity, int $expected): void
+    {
+        if ($productId < 1 || $variantId < 1 || $quantity < 0 || $quantity > 4294967295 || $expected < 0) {
+            throw new \InvalidArgumentException('Enter a valid variant and a non-negative whole stock quantity.');
+        }
+        $this->db->begin_transaction();
+        try {
+            $stmt = $this->db->prepare('SELECT stock_quantity FROM product_variants WHERE id = ? AND product_id = ? FOR UPDATE');
+            $stmt->bind_param('ii', $variantId, $productId);
+            $stmt->execute();
+            $variant = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+            if ($variant === null) {
+                throw new \InvalidArgumentException('The selected variant does not belong to this product.');
+            }
+            if ((int) $variant['stock_quantity'] !== $expected) {
+                throw new \InvalidArgumentException('Stock changed since this form was opened. Review the current stock and try again.');
+            }
+            $stmt = $this->db->prepare('UPDATE product_variants SET stock_quantity = ? WHERE id = ? AND product_id = ?');
+            $stmt->bind_param('iii', $quantity, $variantId, $productId);
+            $stmt->execute();
+            $stmt->close();
+            $this->db->commit();
+        } catch (\Throwable $error) {
+            $this->db->rollback();
+            throw $error;
+        }
+    }
+
+    public function deleteProduct(int $id): void
+    {
+        $stmt = $this->db->prepare('DELETE FROM products WHERE id = ?');
+        $stmt->bind_param('i', $id);
+        $stmt->execute();
+        $deleted = $stmt->affected_rows;
+        $stmt->close();
+        if ($deleted !== 1) {
+            throw new \InvalidArgumentException('Product not found.');
+        }
+    }
+
     public function getProductAll() {
         $sqlmaintable = "SELECT
                 p.id,

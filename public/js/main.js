@@ -8,36 +8,30 @@ document.addEventListener("DOMContentLoaded", () => {
   const mediaQuery = window.matchMedia("(max-width: 900px)");
 
   if (Hamburger && navLinks) {
-    let state = 0; // 0 = closed, 1 = open
-
-    function openHamburger() {
-      if (state === 0) {
-        Hamburger.classList.add('activated');
-        navLinks.classList.remove('hideNav');
-        navLinks.classList.add('showNav');
-        state = 1;
-      } else {
-        Hamburger.classList.remove('activated');
-        navLinks.classList.remove('showNav');
-        navLinks.classList.add('hideNav');
-        state = 0;
-      }
+    function setMenuOpen(open) {
+      Hamburger.classList.toggle('activated', open);
+      Hamburger.setAttribute('aria-expanded', String(open));
+      Hamburger.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+      navLinks.classList.toggle('showNav', open);
+      navLinks.hidden = !open;
     }
 
-    function checkScreenSize() {
-      if (mediaQuery.matches) {
-        state = 0;
-        Hamburger.classList.remove('activated');
-        navLinks.classList.remove('showNav');
-        navLinks.classList.add('hideNav');
+    mediaQuery.addEventListener('change', () => setMenuOpen(false));
+    Hamburger.addEventListener('click', () => {
+      setMenuOpen(mediaQuery.matches && navLinks.hidden);
+    });
+    navLinks.addEventListener('click', (event) => {
+      if (event.target.closest('a')) setMenuOpen(false);
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && !navLinks.hidden) {
+        setMenuOpen(false);
+        Hamburger.focus();
       }
-    }
-
-    mediaQuery.addEventListener('change', checkScreenSize);
-    Hamburger.addEventListener('click', openHamburger);
+    });
 
     // Set initial state on load
-    checkScreenSize();
+    setMenuOpen(false);
   }
 
   /* ============================================================
@@ -195,6 +189,116 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   /* ============================================================
+     CHECKOUT PAYMENT
+     ============================================================ */
+  const checkoutForm = document.querySelector('.checkout-form');
+  if (checkoutForm) {
+    const paymentOptions = checkoutForm.querySelectorAll('[name="payment_method"]');
+    const pickupFields = checkoutForm.querySelector('[data-pickup-fields]');
+    const pickupInput = checkoutForm.querySelector('[name="pickup_at"]');
+    const deliveryFields = checkoutForm.querySelector('[data-delivery-fields]');
+    const addressInputs = deliveryFields ? deliveryFields.querySelectorAll('input') : [];
+
+    if (pickupFields && pickupInput) {
+      function updatePickupFields() {
+        const selected = checkoutForm.querySelector('[name="payment_method"]:checked');
+        const storePickup = selected?.value === 'store_pickup';
+        pickupFields.hidden = !storePickup;
+        pickupInput.disabled = !storePickup;
+        pickupInput.required = storePickup;
+        const needsDelivery = selected?.value === 'gcash' || selected?.value === 'cash_on_delivery';
+        if (deliveryFields) deliveryFields.hidden = !needsDelivery;
+        addressInputs.forEach((input) => {
+          input.disabled = !needsDelivery;
+          input.required = needsDelivery;
+        });
+      }
+
+      paymentOptions.forEach((option) => option.addEventListener('change', updatePickupFields));
+      window.addEventListener('pageshow', updatePickupFields);
+      updatePickupFields();
+    }
+  }
+
+  /* ============================================================
+     ORDER TRACKING
+     ============================================================ */
+  const trackingPage = document.querySelector('[data-tracking-status-url]');
+  if (trackingPage) {
+    const heading = trackingPage.querySelector('[data-tracking-heading]');
+    const badge = trackingPage.querySelector('[data-tracking-status]');
+    const progress = trackingPage.querySelector('[data-tracking-progress]');
+    const note = trackingPage.querySelector('[data-tracking-update-note]');
+    const steps = trackingPage.querySelectorAll('[data-tracking-step]');
+    let refreshing = false;
+    let stopped = false;
+    let timer;
+
+    async function refreshTracking() {
+      if (refreshing || stopped || document.hidden) return;
+      refreshing = true;
+      try {
+        const response = await fetch(trackingPage.dataset.trackingStatusUrl, {
+          headers: {'Accept': 'application/json'},
+          cache: 'no-store',
+          signal: AbortSignal.timeout(10000),
+        });
+        if (response.status === 401 || response.status === 403 || response.status === 404) {
+          stopped = true;
+          clearInterval(timer);
+          note.textContent = 'This order is no longer available. Please sign in to view your orders.';
+          return;
+        }
+        if (!response.ok) throw new Error('Could not refresh order status.');
+        const state = await response.json();
+        if (!state.success || !Number.isInteger(state.progress_step) || state.progress_step < 0 || state.progress_step > steps.length ||
+            !Array.isArray(state.tracking_steps) || state.tracking_steps.length !== steps.length || state.tracking_steps.some((label) => typeof label !== 'string') ||
+            typeof state.status !== 'string' || typeof state.status_class !== 'string' || typeof state.tracking_heading !== 'string') {
+          throw new Error('Unexpected order status response.');
+        }
+        heading.textContent = state.tracking_heading;
+        badge.textContent = state.status;
+        badge.className = `status ${state.status_class}`;
+        progress.hidden = state.progress_step === 0;
+        steps.forEach((step) => {
+          const number = Number(step.dataset.trackingStep);
+          const current = number === state.progress_step;
+          step.querySelector('[data-tracking-step-label]').textContent = state.tracking_steps[number - 1];
+          step.classList.toggle('active', number <= state.progress_step);
+          step.querySelector('[data-tracking-marker]').textContent = number <= state.progress_step ? '✓' : String(number);
+          if (current) step.setAttribute('aria-current', 'step');
+          else step.removeAttribute('aria-current');
+          const stepNote = step.querySelector('[data-tracking-step-note]');
+          stepNote.textContent = current ? 'Current status' : (number === state.progress_step + 1 ? 'Up next' : '');
+          stepNote.hidden = stepNote.textContent === '';
+        });
+        note.textContent = '';
+      } catch {
+        note.textContent = 'Could not refresh your order status. Retrying…';
+      } finally {
+        refreshing = false;
+      }
+    }
+
+    timer = setInterval(refreshTracking, 5000);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) refreshTracking();
+    });
+    window.addEventListener('pagehide', () => {
+      clearInterval(timer);
+      stopped = true;
+    });
+    window.addEventListener('pageshow', (event) => {
+      if (event.persisted) {
+        stopped = false;
+        timer = setInterval(refreshTracking, 5000);
+        refreshTracking();
+      }
+    });
+    refreshTracking();
+  }
+
+  /* ============================================================
      CART QUANTITY
      ============================================================ */
   const cartPage = document.getElementById('cart');
@@ -236,6 +340,10 @@ document.addEventListener("DOMContentLoaded", () => {
             body: data,
           });
           const result = await response.json();
+          if (response.status === 401) {
+            window.location.assign(result.redirect_url || '/login');
+            return;
+          }
           if (!response.ok || !result.success) {
             throw new Error(result.message || 'Could not update your cart.');
           }
@@ -305,8 +413,10 @@ document.addEventListener("DOMContentLoaded", () => {
       quantityInput.value = String(quantity);
       minusButton.disabled = quantity === 1;
       totalInput.value = total;
-      submitButton.value = `Add to Cart ₱${total}`;
-      submitButton.dataset.totalprice = total;
+      if (submitButton) {
+        submitButton.value = `Add to Cart ₱${total}`;
+        submitButton.dataset.totalprice = total;
+      }
       // if (detailPrice) detailPrice.textContent = `₱${total}`;
     }
 
@@ -329,6 +439,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
+      if (form.dataset.loginRequired === 'true') {
+        window.location.assign('/login');
+        return;
+      }
       if (submitting || !form.reportValidity()) return;
 
       const data = new FormData(form);
@@ -362,6 +476,11 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify(payload),
         });
         const result = await response.json();
+
+        if (response.status === 401) {
+          window.location.assign(result.redirect_url || '/login');
+          return;
+        }
 
         if (!response.ok || !result.success) {
           throw new Error(result.message || 'Could not send product options.');

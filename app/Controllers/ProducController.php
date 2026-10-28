@@ -2,6 +2,7 @@
 namespace App\Controllers;
 use App\Models\Product;
 use App\Models\Cart;
+use App\Middleware\AuthMiddleware;
 use Flight;
 use InvalidArgumentException;
 use RuntimeException;
@@ -407,6 +408,7 @@ public function openProduct($id): void
         Flight::render('product.twig', [
             'products' => $products,
             'milk_options' => Cart::milkOptions(),
+            'is_logged_in' => AuthMiddleware::isLoggedIn(),
             'cart_count' => (new Cart())->getCount(),
         ]);
 
@@ -465,6 +467,10 @@ public function openProduct($id): void
 
     public function addToCart($id): void
     {
+        if (!AuthMiddleware::requireLogin(true)) {
+            return;
+        }
+
         $contentType = explode(';', $_SERVER['CONTENT_TYPE'] ?? '')[0];
         if (strtolower(trim($contentType)) !== 'application/json') {
             Flight::json(['success' => false, 'message' => 'Send an application/json request.'], 415);

@@ -1,0 +1,11 @@
+{% set customer = selected_customer %}
+<section id="customer-modal">
+  <h2 id="admin-modal-title">Customer details</h2>
+  <h3>{{ customer.name }}</h3>
+  <p>{{ customer.email }} · {{ customer.phone_number }}</p>
+  <p>Customer since {{ customer.created_at|date('M j, Y', false) }}</p>
+  <p><b>{{ customer.order_count }} orders · ₱{{ customer.amount_spent|number_format(2) }} spent on completed orders</b></p>
+  <h3>Recent orders</h3>
+  {% for order in customer.orders %}<p><a href="/admin?modal=order&amp;id={{ order.id }}">#{{ order.order_number }}</a> · {{ order.status }} · ₱{{ order.total|number_format(2) }}</p>{% else %}<p>No orders yet.</p>{% endfor %}
+  <div class="admin-modal-actions"><a class="outline" href="/admin#admin-customers">Close</a></div>
+</section>

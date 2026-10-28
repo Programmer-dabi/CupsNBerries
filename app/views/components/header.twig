@@ -3,39 +3,42 @@
         <a class="logo" href="/">
           <span class="logo-mark"> C&B </span>
           <span>
-            Cups & Berry
+            Cups &amp; Berries
             <small> COFFEE &amp; PASTRY </small>
           </span>
         </a>
-        <nav>
+        <nav aria-label="Main navigation">
           <a href="/"> Home </a>
           <a href="/#menu"> Menu </a>
           <a href="/#about"> Our Story </a>
           <a href="/#visit"> Visit Us </a>
-          <a href="account.php"> My Account </a>
-          <a href="/logout"> logout (temp) </a>
+          <a href="/account"> My Account </a>
+          {# <a href="/logout"> logout (temp) </a> #}
         </nav>
       
         <div class="nav-actions">
-          <a aria-label="Account" href="/login"> ♙ </a>
           <a aria-label="Cart" href="/cart">
             🛒
             <span data-cart-count> {{ cart_count|default(0) }} </span>
           </a>
         </div>
-        <div class="Hamburger">
-          <div class="line1"></div>
-          <div class="line2"></div>
-          <div class="line3"></div>
-        </div>
+        <button class="Hamburger" type="button" aria-label="Open menu" aria-controls="mobile-navigation" aria-expanded="false">
+          <span class="line1" aria-hidden="true"></span>
+          <span class="line2" aria-hidden="true"></span>
+          <span class="line3" aria-hidden="true"></span>
+        </button>
       </div>
 
-      <div class="navLinks">
+      <nav class="navLinks" id="mobile-navigation" aria-label="Mobile navigation" hidden>
           <a href="/"> Home </a>
           <a href="/#menu"> Menu </a>
           <a href="/#about"> Our Story </a>
           <a href="/#visit"> Visit Us </a>
-          <a href="account.php"> My Account </a>
-          <a href="/logout"> logout (temp) </a>
-      </div>
+          <a href="/account">My Account</a>
+          <a href="/cart">
+            <span aria-hidden="true">🛒</span> Cart
+            <span data-cart-count aria-live="polite">{{ cart_count|default(0) }}</span>
+          </a>
+          {# <a href="/logout"> logout (temp) </a> #}
+      </nav>
     </header>

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Cups &amp; Berries</title>
+    <link href="{{ base_url }}public/style/style.css" rel="stylesheet" />
+  </head>
+  <body>
+    {% include 'components/header.twig' %}
+    <section class="page-shell" id="account">
+      <div class="account-head">
+        <div class="big-avatar">{{ initials }}</div>
+        <div>
+          <span class="kicker"> MY ACCOUNT </span>
+          <h1>{{ customer.name }}</h1>
+          <p>{{ customer.email }} · {{ customer.phone_number }}</p>
+        </div>
+        <a href="/logout"><Button type="button" class="primary">Logout</Button></a>
+      </div>
+      <div class="account-tabs">
+        <button class="active">Orders</button>
+      </div>
+      <div class="panel" id="orders">
+        <div class="panel-title">
+          <h2>Order history</h2>
+          <span>{{ orders|length }} {{ orders|length == 1 ? 'order' : 'orders' }}</span>
+        </div>
+        {% if account_notice %}<p role="status">{{ account_notice }}</p>{% endif %}
+        {% if account_error %}<p class="checkout-errors" role="alert">{{ account_error }}</p>{% endif %}
+        <p class="safe-note">You can cancel an order until preparation begins.</p>
+        {% for order in orders %}
+        <div class="table-row">
+          <span>#{{ order.order_number }}</span>
+          <span>{{ order.created_at|date('M j, Y', false) }}</span>
+          <span>{{ order.item_count }} {{ order.item_count == 1 ? 'item' : 'items' }}</span>
+          <span>₱{{ order.total|number_format(2) }}</span>
+          <span class="status {{ order.status|lower|replace({' ': '_'}) }}">{{ order.status }}</span>
+          <div class="account-order-actions">
+            <a href="/tracking/{{ order.id }}" aria-label="View details for order {{ order.order_number }}"> View details </a>
+            <form action="/account/orders/{{ order.id }}/cancel" method="POST">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+              <button class="outline" type="submit" aria-label="Cancel order {{ order.order_number }}" {% if not order.can_cancel %}disabled{% endif %}>Cancel order</button>
+            </form>
+          </div>
+        </div>
+        {% else %}
+        <p>You haven't placed any orders yet. <a href="/#menu">Browse our menu</a> to get started.</p>
+        {% endfor %}
+      </div>
+    </section>
+    {% include 'components/footer.twig' %}
+    <script type="module" src="{{ base_url }}public/js/main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
+    <title>Cups &amp; Berries</title>
+    <link href="{{ base_url }}public/style/style.css" rel="stylesheet" />
+
+  </head>
+  <body>
+    {% include 'components/header.twig' %}
+
+    <section class="page-shell" id="checkout">
+      <a class="back-link" href="/cart"> ← Back to cart </a>
+      <div class="page-title compact left">
+        <span class="kicker"> ALMOST THERE </span>
+        <h1>Checkout details</h1>
+        <p>Choose your mode of payment and confirm your order.</p>
+      </div>
+      <div class="checkout-layout">
+        <form class="checkout-form" action="/checkout" method="POST" novalidate>
+          <input type="hidden" name="checkout_token" value="{{ checkout_token }}" />
+          {% if errors %}
+          <div class="checkout-errors" role="alert">
+            <b>Please check the following before placing your order:</b>
+            <ul>
+              {% for field, message in errors %}
+              <li>{% if field in ['name', 'phone_number', 'email', 'payment_method', 'pickup_at', 'notes', 'barangay', 'street', 'house_no'] %}<a href="#checkout-{{ field }}">{{ message }}</a>{% else %}{{ message }}{% endif %}</li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+          <section>
+            <div class="form-number">1</div>
+            <div class="form-content">
+              <h2>Contact information</h2>
+              <div class="field-grid">
+                <label>
+                  Full name
+                  <input id="checkout-name" name="name" autocomplete="name" required maxlength="100" value="{{ values.name }}" {% if errors.name is defined %}aria-invalid="true" aria-describedby="error-name"{% endif %} />
+                  {% if errors.name is defined %}<small id="error-name" class="field-error">{{ errors.name }}</small>{% endif %}
+                </label>
+                <label>
+                  Contact number
+                  <input id="checkout-phone_number" type="number" name="phone_number" autocomplete="number" required maxlength="20" value="{{ values.phone_number }}" {% if errors.phone_number is defined %}aria-invalid="true" aria-describedby="error-phone_number"{% endif %} />
+                  {% if errors.phone_number is defined %}<small id="error-phone_number" class="field-error">{{ errors.phone_number }}</small>{% endif %}
+                </label>
+                <label class="full">
+                  Email address
+                  <input id="checkout-email" type="email" name="email" autocomplete="email" required maxlength="150" value="{{ values.email }}" {% if errors.email is defined %}aria-invalid="true" aria-describedby="error-email"{% endif %} />
+                  {% if errors.email is defined %}<small id="error-email" class="field-error">{{ errors.email }}</small>{% endif %}
+                </label>
+              </div>
+            </div>
+          </section>
+          <section>
+            <div class="form-number">2</div>
+            <div class="form-content">
+              <h2 id="payment-heading">Mode of payment</h2>
+              <div id="checkout-payment_method" role="radiogroup" aria-labelledby="payment-heading" {% if errors.payment_method is defined %}aria-invalid="true" aria-describedby="error-payment_method"{% endif %}>
+                {% for value, label in payment_methods %}
+                <label class="payment-choice payment-option">
+                  <input type="radio" name="payment_method" value="{{ value }}" required {% if values.payment_method == value %}checked{% endif %} aria-controls="{{ value == 'store_pickup' ? 'checkout-pickup-fields' : 'checkout-delivery-fields' }}" />
+                  <span>
+                    <b>{{ label }}</b>
+                    {% if value == 'store_pickup' %}<small>Arellano Street, Dagupan City</small>{% endif %}
+                  </span>
+                  <span class="payment-check" aria-hidden="true">✓</span>
+                </label>
+                {% endfor %}
+              </div>
+              {% if errors.payment_method is defined %}<small id="error-payment_method" class="field-error">{{ errors.payment_method }}</small>{% endif %}
+              <div class="field-grid" id="checkout-pickup-fields" data-pickup-fields {% if values.payment_method != 'store_pickup' %}hidden{% endif %}>
+                <label>
+                  Pickup date
+                  <input id="checkout-pickup_at" type="datetime-local" name="pickup_at" min="{{ pickup_min }}" {% if values.payment_method == 'store_pickup' %}required{% else %}disabled{% endif %} value="{{ values.pickup_at }}" {% if errors.pickup_at is defined %}aria-invalid="true" aria-describedby="error-pickup_at"{% endif %} />
+                  {% if errors.pickup_at is defined %}<small id="error-pickup_at" class="field-error">{{ errors.pickup_at }}</small>{% endif %}
+                </label>
+              </div>
+              {% set needsDelivery = values.payment_method in ['gcash', 'cash_on_delivery'] %}
+              <div class="field-grid" id="checkout-delivery-fields" data-delivery-fields {% if not needsDelivery %}hidden{% endif %}>
+                <h4 class="full">Delivery address · {{ delivery_city }}</h4>
+                {% for field, settings in address_fields %}
+                <label{% if field == 'street' %} class="full"{% endif %}>
+                  {{ settings.label }}
+                  <input id="checkout-{{ field }}" type="text" name="{{ field }}" maxlength="{{ settings.max }}" value="{{ attribute(values, field)|default('') }}" {% if needsDelivery %}required{% else %}disabled{% endif %} {% if attribute(errors, field) is defined %}aria-invalid="true" aria-describedby="error-{{ field }}"{% endif %} />
+                  {% if attribute(errors, field) is defined %}<small id="error-{{ field }}" class="field-error">{{ attribute(errors, field) }}</small>{% endif %}
+                </label>
+                {% endfor %}
+              </div>
+            </div>
+          </section>
+          <section>
+            <div class="form-number">3</div>
+            <div class="form-content">
+              <h2>Order notes</h2>
+              <label class="notes">
+                Order notes (optional)
+                <textarea
+                  name="notes"
+                  id="checkout-notes"
+                  maxlength="2000"
+                  {% if errors.notes is defined %}aria-invalid="true" aria-describedby="error-notes"{% endif %}
+                  placeholder="Any pickup instructions or special requests?"
+                >{{ values.notes }}</textarea>
+                {% if errors.notes is defined %}<small id="error-notes" class="field-error">{{ errors.notes }}</small>{% endif %}
+              </label>
+            </div>
+          </section>
+          <button
+            type="submit"
+            class="primary place-order"
+            style="text-align: center"
+          >
+            Place order · ₱{{ total|number_format(2) }} →
+          </button>
+        </form>
+        <aside class="summary-card checkout-summary">
+          <h2>Your order</h2>
+          {% for item in items %}
+          <div class="summary-item">
+            {% if item.image_path %}
+            <img src="{{ base_url }}{{ item.image_path }}" alt="{{ item.product_name }}" />
+            {% else %}
+            <span aria-hidden="true"></span>
+            {% endif %}
+            <span>
+              <b>{{ item.quantity }}× {{ item.product_name }}</b>
+              <small>
+                {{ item.variant_label ?: 'Standard' }}
+                {% if item.milk_preference is not null %} · {{ item.milk_preference|capitalize }} milk{% endif %}
+                {% if item.sugar_level is not null %} · {{ item.sugar_level }}% sugar{% endif %}
+                {% for addon in item.addons %} · {{ addon.name }}{% endfor %}
+              </small>
+            </span>
+            <strong>₱{{ item.line_total|number_format(2) }}</strong>
+          </div>
+          {% else %}
+          <p>Your cart is empty. <a href="/#menu">Browse the menu</a> to add an item.</p>
+          {% endfor %}
+          <hr />
+          <div>
+            <span> Subtotal </span>
+            <b> ₱{{ subtotal|number_format(2) }} </b>
+          </div>
+          <div>
+            <span> Pickup fee </span>
+            <b class="green"> Free </b>
+          </div>
+          <div class="total">
+            <span> Total </span>
+            <b> ₱{{ total|number_format(2) }} </b>
+          </div>
+        </aside>
+      </div>
+    </section>
+            {% include 'components/footer.twig' %}
+    <script type="module" src="{{ base_url }}public/js/main.js"></script>
+
+  </body>
+</html>

@@ -22,6 +22,10 @@
     use App\Controllers\HomeController;
     use App\Controllers\ProducController;
     use App\Controllers\CartController;
+    use App\Controllers\OrderController;
+    use App\Controllers\AccountController;
+    use App\Controllers\AdminController;
+    use App\Controllers\AdminAuthController;
     use App\Middleware\AuthMiddleware;
 
     Flight::route('/login', [new AuthenController(),'login']);
@@ -35,12 +39,28 @@
     Flight::route('/', [new HomeController(),'index']);
 
 
-    Flight::route('/addproduct', [new ProducController(), 'index']);
-    Flight::route('POST /add', [new ProducController(), 'add']);
+    Flight::route('/addproduct', [new AdminController(), 'newProduct']);
+    Flight::route('POST /add', [new AdminController(), 'createProduct']);
     Flight::route('GET /product/@id', [new ProducController(), 'openProduct']);
     Flight::route('GET /products/@id', [new ProducController(), 'passdata']);
     Flight::route('POST /addToCart/@id', [new ProducController(), 'addToCart']);
     Flight::route('GET /cart', [new CartController(), 'index']);
+    Flight::route('GET /checkout', [new CartController(), 'checkout']);
+    Flight::route('POST /checkout', [new OrderController(), 'place']);
+    Flight::route('GET /order-success/@number', [new OrderController(), 'success']);
+    Flight::route('GET /account', [new AccountController(), 'index']);
+    Flight::route('POST /account/orders/@id/cancel', [new AccountController(), 'cancelOrder']);
+    Flight::route('GET /admin/login', [new AdminAuthController(), 'login']);
+    Flight::route('POST /admin/login', [new AdminAuthController(), 'authenticate']);
+    Flight::route('POST /admin/logout', [new AdminAuthController(), 'logout']);
+    Flight::route('GET /admin', [new AdminController(), 'index']);
+    Flight::route('POST /admin/products', [new AdminController(), 'createProduct']);
+    Flight::route('POST /admin/products/@id/edit', [new AdminController(), 'editProduct']);
+    Flight::route('POST /admin/products/@id/stock', [new AdminController(), 'updateStock']);
+    Flight::route('POST /admin/products/@id/delete', [new AdminController(), 'deleteProduct']);
+    Flight::route('POST /admin/orders/@id/status', [new AdminController(), 'updateOrderStatus']);
+    Flight::route('GET /tracking/@id/status', [new OrderController(), 'trackingStatus']);
+    Flight::route('GET /tracking/@id', [new OrderController(), 'tracking']);
     Flight::route('POST /cart/@key/quantity', [new CartController(), 'updateQuantity']);
     Flight::route('POST /cart/@key/remove', [new CartController(), 'remove']);
 

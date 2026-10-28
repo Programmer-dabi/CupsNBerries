@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1" name="viewport" />
-    <title>Kapétolyo Coffee &amp; Bakehouse</title>
-    <link href="../style/style.css" rel="stylesheet" />
+    <title>Cups &amp; Berries</title>
+    <link href="./style/style.css" rel="stylesheet" />
   </head>
   <body>
     <section class="admin-app" id="admin">
@@ -12,7 +12,7 @@
         <a class="logo logo-light" href="home.php">
           <span class="logo-mark"> K </span>
           <span>
-            KAPÉTOLYO
+            Cups &amp; Berries
             <small> COFFEE &amp; BAKEHOUSE </small>
           </span>
         </a>
@@ -65,7 +65,7 @@
         <div class="admin-welcome">
           <div>
             <h2>Good morning, Alex.</h2>
-            <p>Here’s what’s happening at Kapétolyo today.</p>
+            <p>Here’s what’s happening at Cups &amp; Berries today.</p>
           </div>
           <a class="admin-primary" href="admin-modals.php#product-modal">
             ＋ Add product
@@ -583,7 +583,7 @@
             </div>
           </div>
         </section>
-        <section
+        <!-- <section
           class="admin-panel"
           id="admin-promotions"
           style="margin-top: 15px"
@@ -635,7 +635,7 @@
               </a>
             </article>
           </div>
-        </section>
+        </section> -->
         <section
           class="admin-panel"
           id="admin-reports"

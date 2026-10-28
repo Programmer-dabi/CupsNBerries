@@ -1,4 +1,4 @@
-# Kapétolyo — Split Static HTML
+# Cups & Berries — Split Static HTML
 
 Each page uses the shared `css/style.css`.
 

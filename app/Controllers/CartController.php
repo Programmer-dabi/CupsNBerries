@@ -2,6 +2,9 @@
 namespace App\Controllers;
 
 use App\Models\Cart;
+use App\Models\User;
+use App\Models\Order;
+use App\Middleware\AuthMiddleware;
 use Flight;
 use InvalidArgumentException;
 use Throwable;
@@ -10,6 +13,10 @@ class CartController
 {
     public function index(): void
     {
+        if (!AuthMiddleware::requireLogin()) {
+            return;
+        }
+
         try {
             $data = $this->cartData(new Cart());
 
@@ -29,6 +36,58 @@ class CartController
         }
     }
 
+    public function checkout(): void
+    {
+        if (!AuthMiddleware::requireLogin()) {
+            return;
+        }
+
+        try {
+            $data = $this->cartData(new Cart());
+            if ($data['items'] === [] && empty($_SESSION['checkout_errors'])) {
+                Flight::redirect('/cart');
+                return;
+            }
+
+            $customer = null;
+            $userId = filter_var($_SESSION['user'] ?? null, FILTER_VALIDATE_INT);
+            if ($userId !== false && $userId > 0) {
+                $customer = (new User())->getById($userId);
+            }
+
+            if (!isset($_SESSION['checkout_token']) || ($_SESSION['checkout_completed_token'] ?? null) === $_SESSION['checkout_token']) {
+                $_SESSION['checkout_token'] = bin2hex(random_bytes(32));
+            }
+            $values = $_SESSION['checkout_values'] ?? [
+                'name' => $customer['name'] ?? '',
+                'phone_number' => $customer['phone_number'] ?? '',
+                'email' => $customer['email'] ?? '',
+                'payment_method' => 'store_pickup',
+                'pickup_at' => '',
+                'notes' => '',
+                'barangay' => '',
+                'street' => '',
+                'house_no' => '',
+            ];
+            $errors = $_SESSION['checkout_errors'] ?? [];
+            unset($_SESSION['checkout_values'], $_SESSION['checkout_errors']);
+
+            Flight::render('checkout.twig', array_merge($data, [
+                'customer' => $customer,
+                'values' => $values,
+                'errors' => $errors,
+                'checkout_token' => $_SESSION['checkout_token'],
+                'payment_methods' => Order::PAYMENT_METHODS,
+                'address_fields' => Order::ADDRESS_FIELDS,
+                'delivery_city' => Order::DELIVERY_CITY,
+                'pickup_min' => (new \DateTimeImmutable('+1 minute', new \DateTimeZone('Asia/Manila')))->format('Y-m-d\TH:i'),
+            ]));
+        } catch (Throwable $error) {
+            error_log('Checkout display failed (' . get_class($error) . ', code ' . $error->getCode() . ').');
+            Flight::halt(500, 'Could not load checkout. Please try again.');
+        }
+    }
+
     public function updateQuantity(string $key): void
     {
         $this->change($key, false);
@@ -42,6 +101,10 @@ class CartController
     private function change(string $key, bool $remove): void
     {
         $wantsJson = str_contains($_SERVER['HTTP_ACCEPT'] ?? '', 'application/json');
+        if (!AuthMiddleware::requireLogin($wantsJson)) {
+            return;
+        }
+
         $token = $_POST['csrf_token'] ?? null;
         if (!is_string($token) || !isset($_SESSION['cart_csrf']) || !hash_equals($_SESSION['cart_csrf'], $token)) {
             if ($wantsJson) {

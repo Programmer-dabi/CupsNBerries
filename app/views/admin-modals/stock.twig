@@ -1,0 +1,16 @@
+<section id="stock-modal">
+  <h2 id="admin-modal-title">Update variant stock</h2>
+  <h3>{{ selected_product.product_name }}</h3>
+  <form action="/admin/products/{{ selected_product.id }}/stock" method="POST" data-admin-stock-form>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+    <input type="hidden" name="expected_stock" value="{{ selected_variant.stock_quantity }}" data-expected-stock />
+    <div class="field-grid">
+      <label>Variant<select name="variant_id" data-stock-variant required>
+        {% for variant in selected_product.variants %}<option value="{{ variant.id }}" data-stock="{{ variant.stock_quantity }}" {% if variant.id == selected_variant.id %}selected{% endif %}>{{ variant.size_oz }} · {{ variant.stock_quantity }} in stock</option>{% endfor %}
+      </select></label>
+      <label>New stock quantity<input type="number" name="quantity" min="0" max="4294967295" step="1" value="{{ selected_variant.stock_quantity }}" required data-new-stock /></label>
+    </div>
+    <p>Current stock: <b data-current-stock>{{ selected_variant.stock_quantity }}</b>. This saves only the selected variant.</p>
+    <div class="admin-modal-actions"><a class="outline" href="/admin#admin-inventory">Cancel</a><button class="primary" type="submit">Update stock</button></div>
+  </form>
+</section>

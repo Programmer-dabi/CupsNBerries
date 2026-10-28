@@ -8,7 +8,7 @@ use Throwable;
 
 /**
  * Database-backed cart. Prices always come from product data and server settings.
- * A session token owns guest carts; signed-in carts belong to the current user.
+ * Signed-in carts belong to the current user; legacy guest carts can be merged at login.
  */
 class Cart
 {
@@ -16,6 +16,7 @@ class Cart
 
     private mysqli $db;
     private string $cartKey;
+    private ?int $userId = null;
 
     public function __construct(?mysqli $db = null)
     {
@@ -27,12 +28,67 @@ class Cart
         $userId = filter_var($_SESSION['user'] ?? null, FILTER_VALIDATE_INT);
 
         if ($userId !== false && $userId > 0) {
+            $this->userId = $userId;
             $this->cartKey = 'user:' . $userId;
         } else {
             if (!isset($_SESSION['cart_token'])) {
                 $_SESSION['cart_token'] = bin2hex(random_bytes(32));
             }
             $this->cartKey = 'guest:' . $_SESSION['cart_token'];
+        }
+    }
+
+    // Called only after credentials have been verified. Keep guest and account
+    // lines together atomically so a new session can recover the account cart.
+    public function mergeGuestCart(int $userId): void
+    {
+        if ($userId < 1) {
+            throw new InvalidArgumentException('Invalid user ID.');
+        }
+        $token = $_SESSION['cart_token'] ?? null;
+        if (!is_string($token) || !preg_match('/\A[a-f0-9]{64}\z/', $token)) {
+            return;
+        }
+
+        $guestKey = 'guest:' . $token;
+        $userKey = 'user:' . $userId;
+        $this->db->begin_transaction();
+        try {
+            // Serialize concurrent logins merging into the same account.
+            $stmt = $this->db->prepare('SELECT id FROM users WHERE id = ? FOR UPDATE');
+            $stmt->bind_param('i', $userId);
+            $stmt->execute();
+            $user = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+            if ($user === null) {
+                throw new InvalidArgumentException('User not found.');
+            }
+
+            $stmt = $this->db->prepare(
+                'INSERT INTO cart_items
+                    (user_id, cart_key, line_key, product_id, product_name, variant_id,
+                     variant_label, addons, milk_preference, sugar_level, unit_price, quantity, created_at)
+                 SELECT ?, ?, guest.line_key, guest.product_id, guest.product_name, guest.variant_id,
+                        guest.variant_label, guest.addons, guest.milk_preference, guest.sugar_level,
+                        guest.unit_price, guest.quantity, guest.created_at
+                 FROM cart_items guest WHERE guest.user_id IS NULL AND guest.cart_key = ?
+                 ORDER BY guest.line_key
+                 ON DUPLICATE KEY UPDATE
+                    quantity = LEAST(99, cart_items.quantity + VALUES(quantity))'
+            );
+            $stmt->bind_param('iss', $userId, $userKey, $guestKey);
+            $stmt->execute();
+            $stmt->close();
+
+            $stmt = $this->db->prepare('DELETE FROM cart_items WHERE user_id IS NULL AND cart_key = ?');
+            $stmt->bind_param('s', $guestKey);
+            $stmt->execute();
+            $stmt->close();
+            $this->db->commit();
+            unset($_SESSION['cart_token']);
+        } catch (Throwable $error) {
+            $this->db->rollback();
+            throw $error;
         }
     }
 
@@ -60,6 +116,10 @@ class Cart
         ?string $milkPreference = null,
         ?int $sugarLevel = null
     ): string {
+        if ($this->userId === null) {
+            throw new InvalidArgumentException('Please sign in to add items to your cart.');
+        }
+
         $this->assertQuantity($quantity);
         if ($productId < 1 || ($variantId !== null && $variantId < 1)) {
             throw new InvalidArgumentException('Invalid product or variant ID.');
@@ -135,16 +195,16 @@ class Cart
             $unitPrice = number_format($unitCentavos / 100, 2, '.', '');
             $stmt = $this->db->prepare(
                 'INSERT INTO cart_items
-                    (cart_key, line_key, product_id, product_name, variant_id,
+                    (user_id, cart_key, line_key, product_id, product_name, variant_id,
                      variant_label, addons, milk_preference, sugar_level, unit_price, quantity)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                  ON DUPLICATE KEY UPDATE
                     product_name = VALUES(product_name), variant_label = VALUES(variant_label),
                     addons = VALUES(addons), unit_price = VALUES(unit_price), quantity = VALUES(quantity)'
             );
             $stmt->bind_param(
-                'ssisisssisi',
-                $this->cartKey, $key, $productId, $product['product_name'], $variantId,
+                'issisisssisi',
+                $this->userId, $this->cartKey, $key, $productId, $product['product_name'], $variantId,
                 $variantLabel, $addonJson, $milkPreference, $sugarLevel, $unitPrice, $newQuantity
             );
             $stmt->execute();
@@ -178,8 +238,8 @@ class Cart
                     throw new InvalidArgumentException('Not enough stock for the selected variant.');
                 }
             }
-            $stmt = $this->db->prepare('UPDATE cart_items SET quantity = ? WHERE cart_key = ? AND line_key = ?');
-            $stmt->bind_param('iss', $quantity, $this->cartKey, $key);
+            $stmt = $this->db->prepare('UPDATE cart_items SET quantity = ? WHERE user_id <=> ? AND cart_key = ? AND line_key = ?');
+            $stmt->bind_param('iiss', $quantity, $this->userId, $this->cartKey, $key);
             $stmt->execute();
             $stmt->close();
             $this->db->commit();
@@ -191,8 +251,8 @@ class Cart
 
     public function deleteFromCart(string $key): void
     {
-        $stmt = $this->db->prepare('DELETE FROM cart_items WHERE cart_key = ? AND line_key = ?');
-        $stmt->bind_param('ss', $this->cartKey, $key);
+        $stmt = $this->db->prepare('DELETE FROM cart_items WHERE user_id <=> ? AND cart_key = ? AND line_key = ?');
+        $stmt->bind_param('iss', $this->userId, $this->cartKey, $key);
         $stmt->execute();
         $deleted = $stmt->affected_rows;
         $stmt->close();
@@ -202,7 +262,7 @@ class Cart
     }
 
     // Keep the existing return structure: cart lines keyed by their selection hash.
-    public function getItems(): array
+    public function getItems(bool $forUpdate = false): array
     {
         $stmt = $this->db->prepare(
             'SELECT c.line_key, c.product_id, c.product_name, c.variant_id, c.variant_label,
@@ -211,9 +271,10 @@ class Cart
                     (SELECT i.image_path FROM product_images i
                      WHERE i.product_id = c.product_id ORDER BY i.image_order ASC LIMIT 1) AS image_path
              FROM cart_items c JOIN products p ON p.id = c.product_id
-             WHERE c.cart_key = ? ORDER BY c.created_at, c.line_key'
+             WHERE c.user_id <=> ? AND c.cart_key = ? ORDER BY c.created_at, c.line_key'
+            . ($forUpdate ? ' FOR UPDATE' : '')
         );
-        $stmt->bind_param('s', $this->cartKey);
+        $stmt->bind_param('is', $this->userId, $this->cartKey);
         $stmt->execute();
         $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         $stmt->close();
@@ -238,6 +299,16 @@ class Cart
         return array_sum(array_column($this->getItems(), 'quantity'));
     }
 
+    public function getUserId(): ?int
+    {
+        return $this->userId;
+    }
+
+    public function getCartKey(): string
+    {
+        return $this->cartKey;
+    }
+
     public function getTotal(): float
     {
         $totalCentavos = 0;
@@ -249,8 +320,8 @@ class Cart
 
     public function clear(): void
     {
-        $stmt = $this->db->prepare('DELETE FROM cart_items WHERE cart_key = ?');
-        $stmt->bind_param('s', $this->cartKey);
+        $stmt = $this->db->prepare('DELETE FROM cart_items WHERE user_id <=> ? AND cart_key = ?');
+        $stmt->bind_param('is', $this->userId, $this->cartKey);
         $stmt->execute();
         $stmt->close();
     }
@@ -274,9 +345,9 @@ class Cart
 
     private function fetchLine(string $key, bool $lock = false): ?array
     {
-        $sql = 'SELECT product_id, variant_id, quantity FROM cart_items WHERE cart_key = ? AND line_key = ?';
+        $sql = 'SELECT product_id, variant_id, quantity FROM cart_items WHERE user_id <=> ? AND cart_key = ? AND line_key = ?';
         $stmt = $this->db->prepare($sql . ($lock ? ' FOR UPDATE' : ''));
-        $stmt->bind_param('ss', $this->cartKey, $key);
+        $stmt->bind_param('iss', $this->userId, $this->cartKey, $key);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();

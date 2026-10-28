@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1" name="viewport" />
-    <title>Kapétolyo Coffee &amp; Bakehouse</title>
-    <link href="../style/style.css" rel="stylesheet" />
+    <title>Cups &amp; Berries</title>
+    <link href="./style/style.css" rel="stylesheet" />
   </head>
   <body>
   <?php include('../components/header.php');?>
@@ -50,7 +50,7 @@
           ▣
           <div>
             <small> PICKUP LOCATION </small>
-            <b> Cups &amp; Berry Arellano Dagupan </b>
+            <b> Cups &amp; Berries Arellano Dagupan </b>
           </div>
         </div>
       </div>

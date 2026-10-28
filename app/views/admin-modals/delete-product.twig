@@ -1,0 +1,8 @@
+<section id="delete-modal">
+  <h2 id="admin-modal-title">Delete product?</h2>
+  <p>Delete <b>{{ selected_product.product_name }}</b> and its variants and add-ons? This action cannot be undone.</p>
+  <form action="/admin/products/{{ selected_product.id }}/delete" method="POST">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+    <div class="admin-modal-actions"><a class="outline" href="/admin#admin-products">Cancel</a><button class="primary" type="submit">Delete product</button></div>
+  </form>
+</section>

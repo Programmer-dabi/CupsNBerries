@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Administrator sign in · Cups &amp; Berries</title>
+    <link href="{{ base_url }}public/style/style.css" rel="stylesheet" />
+  </head>
+  <body>
+    <main class="login-page">
+      <div class="login-image">
+        <a class="logo logo-light" href="/"><span class="logo-mark">C&amp;B</span><span>Cups &amp; Berries<small>COFFEE &amp; PASTRY</small></span></a>
+        <div><span class="kicker">ADMIN PORTAL</span><h1>A fresh start<br />for your shop.</h1><p>Manage products, variant stock, orders, and customer activity.</p></div>
+        <small>© 2026 Cups &amp; Berries</small>
+      </div>
+      <form class="login-card" action="/admin/login" method="POST">
+        <a class="back-link" href="/">← Back to shop</a>
+        <div><span class="kicker">ADMINISTRATOR ACCESS</span><h1>Admin sign in</h1><p>Use an account with administrator access.</p></div>
+        {% if error %}<p class="checkout-errors" role="alert">{{ error }}</p>{% endif %}
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}" />
+        <label>Email address<input type="email" name="email" value="{{ email }}" autocomplete="username" maxlength="150" required /></label>
+        <label>Password<input type="password" name="password" autocomplete="current-password" required /></label>
+        <button class="primary" type="submit">Sign in to admin →</button>
+        <p>Shopping instead? <a href="/login">Customer sign in</a></p>
+      </form>
+    </main>
+  </body>
+</html>

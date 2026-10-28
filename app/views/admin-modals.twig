@@ -1,0 +1,16 @@
+<dialog class="admin-modal" open data-admin-modal aria-labelledby="admin-modal-title">
+  <div class="admin-modal-head"><a class="back-link" href="/admin">← Back to admin</a><a href="/admin" aria-label="Close dialog">✕</a></div>
+  {% if admin_error %}<p class="checkout-errors" role="alert">{{ admin_error }}</p>{% endif %}
+  {% if admin_success %}<p class="admin-notice" role="status">{{ admin_success }}</p>{% endif %}
+  {% if modal in ['add-product', 'edit-product'] %}
+    {% include 'admin-modals/product.twig' %}
+  {% elseif modal == 'stock' %}
+    {% include 'admin-modals/stock.twig' %}
+  {% elseif modal == 'order' %}
+    {% include 'admin-modals/order.twig' %}
+  {% elseif modal == 'customer' %}
+    {% include 'admin-modals/customer.twig' %}
+  {% elseif modal == 'delete-product' %}
+    {% include 'admin-modals/delete-product.twig' %}
+  {% endif %}
+</dialog>
